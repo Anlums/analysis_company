@@ -28,4 +28,29 @@ default = true
 [dependency-groups]
 dev = [
     "pypdf>=6.20.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 只把 app/ 计入覆盖率；迁移脚本与种子数据是一次性产物，纳入会虚高覆盖率
+addopts = "-q --strict-markers --cov=app --cov-report=term-missing"
+markers = [
+    "db: 需要真实 MySQL 的测试（容器 bilingual-agents-mysql，端口 3308）",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/seed/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
 ]

@@ -32,8 +32,10 @@ _ANCHOR_RE = re.compile(
     r"(?:#(?P<cell_ref>[^#\s]+))?"
 )
 
-# 单元格引用形如「表1R3C2」
-_CELL_RE = re.compile(r"^表\d+R[1-9]\d*C[1-9]\d*$")
+# 单元格引用形如「表1R3C2」。表号与行列号一律从 1 起：表0 / R0 / C0 无意义，
+# 而三个位置规则不一致会让「某个位置有前导零」这类畸形引用时而过时而被拒。
+# 用 fullmatch 调用，故模式内不再写 ^ $。
+_CELL_RE = re.compile(r"表[1-9]\d*R[1-9]\d*C[1-9]\d*")
 
 RELATION_TYPES = (RELATION_DIRECT, RELATION_INDIRECT, RELATION_COUNTER)
 CONCLUSION_TYPES = (
