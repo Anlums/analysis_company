@@ -135,6 +135,23 @@
 
 **未建**：任务域、准则映射域、配置域其余表、标注与评估域、审计日志表。这些域当前无数据来源，等对应智能体开工时再建。
 
+**工程与测试（2026-10-15 补齐）**：
+
+- **已建 git 仓库并推到** https://github.com/Anlums/analysis_company （分支 `main`）。
+  远端原有 GitHub 自动生成的 `Initial commit`（仅一行 README），已用无共同祖先合并保留其历史，未强推。
+- **pytest + pytest-cov 已装**，配置在 `pyproject.toml`。当前 94 个测试、覆盖率 93%。
+  标记：`slow`（解析真实年报，约 60 秒，文件不在本机时自动跳过）、`db`（需要 MySQL）。
+  日常开发用 `uv run pytest -m "not slow"`，2.7 秒出结果。
+
+**解析流水线（2026-10-15 完成第一段）**：
+
+`app/retrieval/parser.py` 实现 8.1 流水线前段：逐页取文本 → 块序列 → 块标识分配。
+
+- ⚠️ **必须用 pypdf 的 `extraction_mode="layout"`，不能用默认的 `plain`**。plain 模式把版面压成一维行流，实测 244 页年报里 `"\n\n"` 出现 **0 次**，段落边界无从恢复，切块退化成「一页一块」（244 块）；plain 还会把标签拦腰截断（`公司注册地址的历史变更情` 与 `况` 分作两行）。layout 模式保留缩进与空行，同一页空行数从 0 恢复到 14。
+- 实测岳阳林纸 2025 年报（244 页）：**2865 个块**，平均每页 12 块，耗时 15 秒
+- 未做：版面分析（区分正文/标题/表格/图表）、OCR、坐标框。接入 PaddleOCR 与 Unstructured 时替换 `_extract_page_text`，块标识生成规则与下游不受影响
+- 接 PaddleOCR 前建议先做批量入库（第二步），把 168 个 PDF 注册进 `company` / `document` / `document_block`，预计 30 万个块
+
 ### 环境约束（踩过的坑，别重复踩）
 
 1. **MySQL 宿主端口是 3308，不是 3306**。本机 3306 被原生 MySQL 5.7 服务（Windows 服务 `MySQL57`，开机自启）占用，3307 被另一个项目的 `mysql8` 容器预留。改端口要同步改三处：`docker-compose.yml`、`.env`/`.env.example`、`app/core/config.py`。
