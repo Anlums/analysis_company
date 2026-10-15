@@ -1,0 +1,26 @@
+# 虚拟环境
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 环境变量（含密钥，严禁入库）
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# 数据与缓存
+data/
+*.log
+
+# 测试与检查缓存
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

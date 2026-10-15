@@ -1,0 +1,37 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bilingual-agents-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: dev123456
+      MYSQL_DATABASE: bilingual_agents
+      TZ: Asia/Shanghai
+    ports:
+      # 宿主 3306 被本机原生 MySQL 5.7 服务（Windows 服务 MySQL57，开机自启）占用，
+      # 3307 被另一个项目的 mysql8 容器预留，故本项目用 3308。
+      # 改这里必须同步改 .env / .env.example 的 DATABASE_URL 端口。
+      - "3308:3306"
+    # 中文年报含大量生僻字，字符集必须是 utf8mb4，否则存不进去
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pdev123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Redis 已有独立的 Docker 容器在跑，此处不再重复起，避免 6379 端口冲突。
+  # 若需用本文件一并管理，取消下面注释并停掉原有容器。
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: bilingual-agents-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - ./data/redis:/data
