@@ -155,11 +155,11 @@ FIELD_DEFINITIONS: tuple[dict[str, object], ...] = (
     ),
     # 二、环境字段（ESG 报告环境绩效章节）
     _field(
-        "ENV_GHG_S1", "温室气体排放量（范围一）", "吨CO2e", CATEGORY_ENV,
+        "ENV_GHG_S1", "温室气体排放量（范围一）", "吨CO₂e", CATEGORY_ENV,
         "ESG 报告环境绩效章节", "七维评分·完整性覆盖率",
     ),
     _field(
-        "ENV_GHG_S2", "温室气体排放量（范围二）", "吨CO2e", CATEGORY_ENV,
+        "ENV_GHG_S2", "温室气体排放量（范围二）", "吨CO₂e", CATEGORY_ENV,
         "ESG 报告环境绩效章节", "七维评分·完整性覆盖率",
     ),
     _field(
@@ -245,7 +245,7 @@ FIELD_DEFINITIONS: tuple[dict[str, object], ...] = (
         "年报附注", "行业专属风险识别",
     ),
     _field(
-        "FOR_CARBON", "碳汇量", "吨CO2e", CATEGORY_FOR,
+        "FOR_CARBON", "碳汇量", "吨CO₂e", CATEGORY_FOR,
         "ESG 报告", "行业专属风险识别",
     ),
     _field(

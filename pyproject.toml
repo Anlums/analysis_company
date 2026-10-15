@@ -30,6 +30,7 @@ default = true
 dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "python-docx>=1.2.0",
 ]
 
 [tool.pytest.ini_options]
@@ -45,6 +46,7 @@ markers = [
 source = ["app"]
 omit = [
     "app/seed/*",
+    "app/retrieval/viewer.py",
     "*/__pycache__/*",
 ]
 
