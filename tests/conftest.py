@@ -11,6 +11,10 @@ import pytest
 # 真实公司：岳阳林纸，上交所 600963
 REAL_COMPANY_CODE = "CN_600963"
 REAL_DOC_CODE = "CN_600963_2025_ANNUAL"
+
+# 测试专用公司标识。用 999999 这类不会与真实数据撞车的编码——测试事务虽然会回滚，
+# 但读得到库里已提交的真实数据，用真实编码会让断言依赖「生产库是空的」这个假前提。
+TEST_COMPANY_CODE = "CN_999999"
 REAL_BLOCK_ID = f"{REAL_DOC_CODE}:42:3"
 REAL_CELL_REF = "表1R3C2"
 
@@ -157,19 +161,19 @@ def db_session():
 
 @pytest.fixture
 def company_id(db_session) -> int:
-    """在测试事务内建一家公司，返回其主键。"""
+    """在测试事务内建一家测试专用公司，返回其主键。"""
     from sqlalchemy import select
 
     from app.models.company import Company
 
     existing = db_session.execute(
-        select(Company.id).where(Company.company_code == REAL_COMPANY_CODE)
+        select(Company.id).where(Company.company_code == TEST_COMPANY_CODE)
     ).scalar_one_or_none()
     if existing is not None:
         return existing
 
     company = Company(
-        company_code=REAL_COMPANY_CODE,
+        company_code=TEST_COMPANY_CODE,
         name_cn="测试用公司",
         country="CN",
         industry_code="FOR",

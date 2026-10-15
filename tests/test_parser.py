@@ -13,6 +13,7 @@ import pytest
 
 from app.retrieval.parser import ParsedBlock, ParsedDocument, parse_pdf, split_page_blocks
 from app.schemas.common import make_block_id
+from app.schemas.evidence import EvidenceAnchor
 
 
 class TestSplitPageBlocks:
@@ -134,6 +135,22 @@ class TestParsePdfDeterminism:
         page1 = [b for b in doc.blocks if b.page_no == 1]
         assert any("Accounts receivable" in b.raw_text for b in page1)
 
+    def test_every_block_id_is_anchor_parseable(self, sample_pdf) -> None:
+        """跨模块契约：解析器产出的每个块标识，证据锚点都必须能解析回去。
+
+        解析不了的话锚点写入时不报错，回指时才发现查不到块。这条此前没有被测试守着。
+        """
+        doc = parse_pdf(sample_pdf)
+        for block in doc.blocks:
+            raw_id = block.block_id("DOC_1")
+            anchor = EvidenceAnchor.parse(raw_id)
+            assert str(anchor) == raw_id
+            assert anchor.block_anchor == raw_id
+
+    def test_no_failed_pages_on_healthy_pdf(self, sample_pdf) -> None:
+        doc = parse_pdf(sample_pdf)
+        assert doc.failed_pages == ()
+
     def test_page_three_content_lands_on_page_three(self, sample_pdf) -> None:
         doc = parse_pdf(sample_pdf)
         assert doc.blocks[-1].page_no == 3
@@ -170,3 +187,14 @@ class TestParseRealAnnualReport:
     def test_real_report_page_numbers_within_range(self, real_annual_report) -> None:
         doc = parse_pdf(real_annual_report)
         assert all(1 <= b.page_no <= doc.page_count for b in doc.blocks)
+
+    def test_real_report_no_failed_pages(self, real_annual_report) -> None:
+        doc = parse_pdf(real_annual_report)
+        assert doc.failed_pages == ()
+
+    def test_all_real_block_ids_are_anchor_parseable(self, real_annual_report) -> None:
+        """对着 2865 个真实块标识跑一遍往返，确认锚点契约在真实数据上成立。"""
+        doc = parse_pdf(real_annual_report)
+        for block in doc.blocks:
+            raw_id = block.block_id("CN_600963_2025_ANNUAL")
+            assert str(EvidenceAnchor.parse(raw_id)) == raw_id

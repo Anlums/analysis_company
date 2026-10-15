@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pypdf
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
@@ -31,9 +32,13 @@ from app.models.document import (
 from app.retrieval.parser import parse_pdf
 from app.schemas.common import check_doc_code
 
-# 解析器版本。写入 document.parse_version——解析逻辑一变这个值就要动，
-# 以便分辨「哪些文档是旧解析器产出、需要重解析」。
-PARSE_VERSION = "v0.1-pypdf-layout"
+# 解析器版本。写入 document.parse_version，用于分辨「哪些文档是旧解析器产出、需重解析」。
+#
+# 必须带上 pypdf 版本，不能只写自己的版本号：实测 pypdf 6.0 与 6.20 解析同一份年报，
+# 块的**数量与标识完全相同**（2865 个，逐页一致），但 79.9% 的块**文本不同**——断行与
+# 空格插入算法变了。锚点照旧解析成功、照旧打得开，指向的内容却已经变了，且不报任何错。
+# 把库版本编进 parse_version 是唯一能让这种漂移可见的办法。
+PARSE_VERSION = f"v0.1-pypdf{pypdf.__version__}-layout"
 
 # 文档类型 → 编码后缀。后缀进 doc_code，故必须 ASCII 且短。
 DOC_TYPE_SUFFIX: dict[str, str] = {

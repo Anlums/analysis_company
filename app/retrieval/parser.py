@@ -10,6 +10,7 @@
 页号按文档顺序从 1 起。
 """
 
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from pypdf import PdfReader
 
 from app.models.document import BLOCK_TEXT
 from app.schemas.common import make_block_id
+
+logger = logging.getLogger(__name__)
 
 # 空行分段：一个或多个「只含空白的行」视为段间分隔。
 # 只按单个换行切会把一句话打碎成没有上下文的多块，故必须要求成对换行。
@@ -48,6 +51,9 @@ class ParsedBlock:
 class ParsedDocument:
     page_count: int
     blocks: tuple[ParsedBlock, ...]
+    # 抽取失败被跳过的页码。必须显式带出来：一页流损坏不该让整份文档一块都拿不到，
+    # 但也不能静默跳过——那会让「文档解析成功」与「文档其实缺了好几页」长得一样。
+    failed_pages: tuple[int, ...] = ()
 
 
 def split_page_blocks(text: str) -> tuple[str, ...]:
@@ -91,12 +97,23 @@ def parse_pdf(path: Path | str) -> ParsedDocument:
 
     不做语种判定、不做版面分类，只做结构还原与位置记录（8.1：解析只做结构还原，
     不解释语义，以保证同一份文档无论被哪个任务调用结果完全一致）。
+
+    逐页隔离：单页内容流损坏（截断、无法解码）只跳过该页并记入 failed_pages，
+    不让整份文档失败。实测 244 页文档中只要有一页流损坏，不隔离的话一块都拿不到。
     """
     reader = PdfReader(str(path))
     blocks: list[ParsedBlock] = []
+    failed_pages: list[int] = []
 
     for page_no, page in enumerate(reader.pages, start=1):
-        for block_index, raw in enumerate(split_page_blocks(_extract_page_text(page))):
+        try:
+            text = _extract_page_text(page)
+        except Exception as exc:  # noqa: BLE001  单页损坏不应拖垮整份文档
+            logger.warning("第 %d 页抽取失败，已跳过：%s", page_no, exc)
+            failed_pages.append(page_no)
+            continue
+
+        for block_index, raw in enumerate(split_page_blocks(text)):
             blocks.append(
                 ParsedBlock(
                     page_no=page_no,
@@ -107,4 +124,8 @@ def parse_pdf(path: Path | str) -> ParsedDocument:
                 )
             )
 
-    return ParsedDocument(page_count=len(reader.pages), blocks=tuple(blocks))
+    return ParsedDocument(
+        page_count=len(reader.pages),
+        blocks=tuple(blocks),
+        failed_pages=tuple(failed_pages),
+    )

@@ -17,6 +17,7 @@ import pytest
 from app.retrieval.ingest import build_doc_code, ingest_document, DocumentSpec
 from app.retrieval.parser import parse_pdf
 from app.schemas.evidence import EvidenceAnchor
+from tests.conftest import TEST_COMPANY_CODE
 
 
 class TestBuildDocCode:
@@ -78,7 +79,7 @@ class TestIngestDocument:
 
     def test_ingest_writes_document_and_blocks(self, db_session, sample_pdf, company_id) -> None:
         spec = DocumentSpec(
-            company_code="CN_600963",
+            company_code=TEST_COMPANY_CODE,
             doc_type="annual_report",
             fiscal_year=2025,
             period="FY",
@@ -105,7 +106,7 @@ class TestIngestDocument:
 
     def test_ingest_is_idempotent(self, db_session, sample_pdf, company_id) -> None:
         spec = DocumentSpec(
-            company_code="CN_600963",
+            company_code=TEST_COMPANY_CODE,
             doc_type="annual_report",
             fiscal_year=2024,
             period="FY",
@@ -130,7 +131,7 @@ class TestIngestDocument:
         from app.models.document import Document, PARSE_SUCCEEDED
 
         spec = DocumentSpec(
-            company_code="CN_600963",
+            company_code=TEST_COMPANY_CODE,
             doc_type="annual_report",
             fiscal_year=2023,
             period="FY",
@@ -150,7 +151,7 @@ class TestIngestDocument:
         from sqlalchemy import select
 
         spec = DocumentSpec(
-            company_code="CN_600963",
+            company_code=TEST_COMPANY_CODE,
             doc_type="annual_report",
             fiscal_year=2022,
             period="FY",
