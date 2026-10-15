@@ -43,9 +43,12 @@ class Settings(BaseSettings):
     schema_version: str = "v0.1"
     prompt_version: str = "v0.1"
 
-    # 文档上传
+    # 文档上传与数据集
     upload_dir: str = "data/uploads"
     max_upload_mb: int = 200
+    # 原始年报数据集目录（在 OneDrive 里，不在本仓库）。入库脚本从这里取源文件，
+    # 不把它拷进仓库——168 份 PDF 有 500 MB，进版本库会让仓库爆掉。
+    dataset_dir: str = ""
 
     # 前端开发服务器（Vite）
     cors_origins: list[str] = ["http://localhost:5173"]

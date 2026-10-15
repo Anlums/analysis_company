@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 # 真实公司：岳阳林纸，上交所 600963
+REAL_COMPANY_CODE = "CN_600963"
 REAL_DOC_CODE = "CN_600963_2025_ANNUAL"
 REAL_BLOCK_ID = f"{REAL_DOC_CODE}:42:3"
 REAL_CELL_REF = "表1R3C2"
@@ -125,3 +126,54 @@ def real_annual_report() -> Path:
     if not REAL_REPORT.exists():
         pytest.skip(f"真实年报不在本机：{REAL_REPORT}")
     return REAL_REPORT
+
+
+@pytest.fixture
+def db_session():
+    """带事务隔离的数据库会话。
+
+    整个测试跑在一个最外层事务里，结束时回滚，所以测试数据不会残留在库里。
+    入库逻辑自己会 commit（它要服务真实调用），配合 create_savepoint 让那些
+    commit 只落到 savepoint 上，外层回滚依然能收干净。
+    """
+    from sqlalchemy.orm import Session
+
+    from app.core.database import engine
+
+    try:
+        connection = engine.connect()
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"MySQL 不可用，跳过数据库测试：{exc}")
+
+    transaction = connection.begin()
+    session = Session(bind=connection, join_transaction_mode="create_savepoint")
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
+
+
+@pytest.fixture
+def company_id(db_session) -> int:
+    """在测试事务内建一家公司，返回其主键。"""
+    from sqlalchemy import select
+
+    from app.models.company import Company
+
+    existing = db_session.execute(
+        select(Company.id).where(Company.company_code == REAL_COMPANY_CODE)
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    company = Company(
+        company_code=REAL_COMPANY_CODE,
+        name_cn="测试用公司",
+        country="CN",
+        industry_code="FOR",
+    )
+    db_session.add(company)
+    db_session.flush()
+    return company.id
