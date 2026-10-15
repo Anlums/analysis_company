@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from app.api.v1 import evidence
+
 api_router = APIRouter()
 
 # 各模块路由按技术架构文档第五章挂载到这里：
@@ -7,3 +9,4 @@ api_router = APIRouter()
 #   documents  文档上传 / 解析触发
 #   evidence   按证据锚点取原文片段
 #   events     SSE 执行事件流
+api_router.include_router(evidence.router)

@@ -21,6 +21,7 @@ from app.models.evidence import (
     RELATION_INDIRECT,
 )
 from app.schemas.common import check_doc_code
+from app.schemas.document import BBox
 
 # 页号与块序号不接受前导零：块标识是由文档标识、页码与页内序号确定性生成的字符串，
 # 若解析时把 "007" 归一化成 "7"，与库里存的 "007" 就不再相等，而且不报错——
@@ -124,6 +125,56 @@ class EvidenceWithAnchor(EvidenceRead):
                 parsed = parsed.model_copy(update={"cell_ref": self.cell_ref})
             self.anchor = parsed
         return self
+
+
+class SourceBlockRead(BaseModel):
+    """证据回指的原文块。
+
+    字段按 5.2 规定：文档标识、页码、归一化坐标框、原文片段，表格类额外携带单元格
+    引用。前四项齐了前端才能定位并高亮，缺一项就会退化成「只给一段文字」。
+    """
+
+    block_id: str
+    doc_code: str
+    document_id: int
+    file_name: str
+    page_no: int
+    block_index: int
+    block_type: str
+    raw_text: str
+    bbox: BBox | None = None
+    is_ocr: bool = False
+    ocr_confidence: float | None = None
+    cell_ref: str | None = None
+    anchor: EvidenceAnchor | None = None
+
+    @model_validator(mode="after")
+    def _derive_anchor(self) -> "SourceBlockRead":
+        if self.anchor is None:
+            parsed = EvidenceAnchor.parse(self.block_id)
+            if self.cell_ref:
+                parsed = parsed.model_copy(update={"cell_ref": self.cell_ref})
+            self.anchor = parsed
+        return self
+
+
+class AnchorBatchRequest(BaseModel):
+    """批量取原文的入参。
+
+    上限 200 条：一次响应里挂载的证据来自同一条结论，实际不会很多；设上限是防止
+    有人拿它当全量导出接口用。
+    """
+
+    anchors: list[str] = Field(min_length=1, max_length=200)
+
+
+class AnchorBatchResponse(BaseModel):
+    """批量结果。顺序与请求一一对应，取不到的条目占位为 null。
+
+    不把取不到的过滤掉：调用方要能把结果与请求对齐，否则一条证据失效会让后面全部错位。
+    """
+
+    blocks: list[SourceBlockRead | None]
 
 
 class ConclusionEvidenceCreate(BaseModel):
